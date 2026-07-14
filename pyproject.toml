@@ -2,8 +2,16 @@
 name = "caf-prototype"
 version = "0.1.0"
 description = "Reference prototype for the Cognitive Autonomic Framework (CAF): the RST compiler and a microservice testbed."
+readme = "README.md"
 requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Tobi Adeosun", email = "me@tadeosun.com" }]
 dependencies = ["pydantic>=2.6"]
+
+[project.urls]
+Source = "https://github.com/tflux2011/caf-prototype"
+Paper = "https://zenodo.org/records/21352597"
+"Paper source" = "https://github.com/tflux2011/caf"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

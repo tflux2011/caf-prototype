@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "CAF Reference Implementation"
+abstract: >-
+  Reference prototype and evaluation harness for the Cognitive Autonomic
+  Framework (CAF): a static Runtime Semantic Topology (RST) compiler, a
+  belief-sharing gossip fabric, per-service sidecar agents with tiered triage,
+  and a verified-admission repair boundary. Includes a microservice testbed and
+  the RQ1/RQ2/RQ4 evaluation harnesses used in the accompanying paper.
+type: software
+authors:
+  - given-names: Tobi
+    family-names: Adeosun
+    email: me@tadeosun.com
+    affiliation: "Independent Researcher, Texas, USA"
+version: "0.1.0"
+date-released: "2026-07-14"
+license: Apache-2.0
+repository-code: "https://github.com/tflux2011/caf-prototype"
+keywords:
+  - autonomic computing
+  - self-healing systems
+  - distributed systems
+  - gossip protocols
+  - program analysis
+  - large language model agents
+  - reference implementation
+preferred-citation:
+  type: article
+  title: >-
+    Cognitive Autonomic Frameworks: Layered Cognition for Self-Modeling,
+    Self-Healing Distributed Systems
+  authors:
+    - given-names: Tobi
+      family-names: Adeosun
+      email: me@tadeosun.com
+      affiliation: "Independent Researcher, Texas, USA"
+  year: 2026
+  doi: "10.5281/zenodo.21352597"
+  url: "https://zenodo.org/records/21352597"
+  notes: "Preprint"
