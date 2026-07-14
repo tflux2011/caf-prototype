@@ -7,8 +7,8 @@ Tobi Adeosun · Independent Researcher (Texas, USA) · [me@tadeosun.com](mailto:
 This repository is the reference implementation and evaluation harness for the
 CAF paper. The paper (LaTeX source) lives in a companion repository:
 **[tflux2011/caf](https://github.com/tflux2011/caf)**, and the archived paper is
-published on Zenodo: **[zenodo.org/records/21363579](https://zenodo.org/records/21363579)**
-(DOI [10.5281/zenodo.21363579](https://doi.org/10.5281/zenodo.21363579)).
+published on Zenodo: **[zenodo.org/records/21352597](https://zenodo.org/records/21352597)**
+(DOI [10.5281/zenodo.21352597](https://doi.org/10.5281/zenodo.21352597)).
 
 Everything here is real: a static RST compiler that parses source without
 executing it, four instrumented microservices plus two external dependencies as
@@ -174,13 +174,14 @@ This software accompanies the CAF paper. To cite the paper (archived on Zenodo):
   author       = {Adeosun, Tobi},
   year         = {2026},
   note         = {Preprint},
-  doi          = {10.5281/zenodo.21363579},
-  howpublished = {\url{https://zenodo.org/records/21363579}}
+  doi          = {10.5281/zenodo.21352597},
+  howpublished = {\url{https://zenodo.org/records/21352597}}
 }
 ```
 
 To cite the software itself, use the metadata in [`CITATION.cff`](CITATION.cff)
-(GitHub renders a "Cite this repository" button from it).
+(GitHub renders a "Cite this repository" button from it). The archived code has
+its own DOI: [10.5281/zenodo.21363579](https://doi.org/10.5281/zenodo.21363579).
 
 ## License
 
