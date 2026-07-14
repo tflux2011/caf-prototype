@@ -10,7 +10,7 @@ dependencies = ["pydantic>=2.6"]
 
 [project.urls]
 Source = "https://github.com/tflux2011/caf-prototype"
-Paper = "https://zenodo.org/records/21352597"
+Paper = "https://zenodo.org/records/21363579"
 "Paper source" = "https://github.com/tflux2011/caf"
 
 [project.optional-dependencies]
