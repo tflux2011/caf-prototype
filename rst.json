@@ -1,0 +1,148 @@
+{
+  "version": "0.1.0",
+  "generated_by": "caf-ast-compiler-py@0.1",
+  "nodes": {
+    "auth": {
+      "kind": "service",
+      "endpoints": [
+        "/verify"
+      ],
+      "depends_on": [
+        "subscription"
+      ],
+      "failure_domain": "identity",
+      "ownership": "team-identity",
+      "criticality": "high",
+      "expected_latency_ms": {
+        "p50": 15,
+        "p99": 90
+      },
+      "permitted_actions": [
+        "restart_connection_pool",
+        "open_circuit_breaker"
+      ]
+    },
+    "payment": {
+      "kind": "service",
+      "endpoints": [
+        "/charge",
+        "/refund"
+      ],
+      "depends_on": [
+        "postgres-primary",
+        "stripe"
+      ],
+      "failure_domain": "billing",
+      "ownership": "team-payments",
+      "criticality": "critical",
+      "retry_policy": {
+        "max": 3,
+        "backoff_ms": 200,
+        "jitter": true
+      },
+      "expected_latency_ms": {
+        "p50": 40,
+        "p99": 250
+      },
+      "permitted_actions": [
+        "apply_traffic_throttle",
+        "restart_connection_pool",
+        "trigger_canary_rollback",
+        "open_circuit_breaker"
+      ]
+    },
+    "subscription": {
+      "kind": "service",
+      "endpoints": [
+        "/status"
+      ],
+      "depends_on": [
+        "payment"
+      ],
+      "failure_domain": "billing",
+      "ownership": "team-billing",
+      "criticality": "high",
+      "expected_latency_ms": {
+        "p50": 30,
+        "p99": 180
+      },
+      "permitted_actions": [
+        "apply_traffic_throttle",
+        "open_circuit_breaker"
+      ]
+    },
+    "user-api": {
+      "kind": "service",
+      "endpoints": [
+        "/me",
+        "/signup"
+      ],
+      "depends_on": [
+        "auth"
+      ],
+      "failure_domain": "edge",
+      "ownership": "team-gateway",
+      "criticality": "high",
+      "expected_latency_ms": {
+        "p50": 20,
+        "p99": 120
+      },
+      "permitted_actions": [
+        "apply_traffic_throttle",
+        "open_circuit_breaker"
+      ]
+    },
+    "stripe": {
+      "kind": "external_dependency",
+      "endpoints": [],
+      "depends_on": [],
+      "permitted_actions": []
+    },
+    "postgres-primary": {
+      "kind": "external_dependency",
+      "endpoints": [],
+      "depends_on": [],
+      "failure_domain": "data-tier",
+      "criticality": "critical",
+      "permitted_actions": []
+    }
+  },
+  "edges": [
+    {
+      "from": "auth",
+      "to": "subscription",
+      "kind": "http",
+      "idempotent": true,
+      "provenance": "compiled"
+    },
+    {
+      "from": "payment",
+      "to": "stripe",
+      "kind": "http",
+      "idempotent": false,
+      "provenance": "compiled"
+    },
+    {
+      "from": "payment",
+      "to": "postgres-primary",
+      "kind": "sql",
+      "pool": "billing-pool",
+      "timeout_ms": 500,
+      "provenance": "compiled"
+    },
+    {
+      "from": "subscription",
+      "to": "payment",
+      "kind": "http",
+      "idempotent": false,
+      "provenance": "compiled"
+    },
+    {
+      "from": "user-api",
+      "to": "auth",
+      "kind": "http",
+      "idempotent": false,
+      "provenance": "compiled"
+    }
+  ]
+}

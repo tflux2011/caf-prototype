@@ -1,0 +1,167 @@
+name: caf-testbed
+
+# Phase A: the four CAF services plus their external dependencies, wired into a
+# runnable topology that mirrors rst.json exactly:
+#   user-api -> auth -> subscription -> payment -> {postgres-primary, stripe}
+# Service names are the RST node ids (and the DNS hostnames the code resolves),
+# so the running topology matches the statically compiled RST.
+
+# Phase D: reasoner selection for every sidecar agent, passed through from the
+# host environment. Defaults keep the deterministic playbook; export
+# CAF_AGENT_REASONER=openai and OPENAI_API_KEY to run the live model. The key is
+# never stored in the repo or image -- it flows only from the host shell.
+x-reasoner-env: &reasoner-env
+  CAF_AGENT_REASONER: ${CAF_AGENT_REASONER:-deterministic}
+  CAF_AGENT_GROUNDED: ${CAF_AGENT_GROUNDED:-1}
+  CAF_OPENAI_MODEL: ${CAF_OPENAI_MODEL:-gpt-4o-mini}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+services:
+  postgres-primary:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: billing
+      POSTGRES_DB: billing
+      # Testbed-only: no password on an internal-only network, and Postgres is
+      # NOT published to the host. Do NOT use trust auth in production.
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billing -d billing"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks: [caf]
+
+  stripe:
+    image: caf-testbed:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: uvicorn main:app --host 0.0.0.0 --port 9000 --app-dir deploy/stripe_stub
+    ports:
+      # Testbed-only fault-injection control plane. Exposed like the entry
+      # service so the host harness can drive it; carries no secrets and must
+      # never run outside a local/CI testbed. Host 9100 -> container 9000.
+      - "9100:9000"
+    networks: [caf]
+
+  payment:
+    image: caf-testbed:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: uvicorn service:app --host 0.0.0.0 --port 8080 --app-dir testbed/subscription/payment
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+      stripe:
+        condition: service_started
+    networks: [caf]
+
+  subscription:
+    image: caf-testbed:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: uvicorn service:app --host 0.0.0.0 --port 8080 --app-dir testbed/subscription/subscription
+    depends_on:
+      payment:
+        condition: service_started
+    networks: [caf]
+
+  auth:
+    image: caf-testbed:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: uvicorn service:app --host 0.0.0.0 --port 8080 --app-dir testbed/subscription/auth
+    depends_on:
+      subscription:
+        condition: service_started
+    networks: [caf]
+
+  user-api:
+    image: caf-testbed:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: uvicorn service:app --host 0.0.0.0 --port 8080 --app-dir testbed/subscription/user_api
+    depends_on:
+      auth:
+        condition: service_started
+    ports:
+      # Only the entry service is published to the host.
+      - "8080:8080"
+    networks: [caf]
+
+  # --- CAF sidecar agents (Phase B) ---------------------------------------
+  # One agent per service. Each scrapes its local service's /caf/telemetry,
+  # forms grounded beliefs, and gossips them to peers over real HTTP/TCP.
+  # Agent control planes are published on 7071-7074 for inspection.
+  payment-agent:
+    image: caf-testbed:local
+    command: uvicorn caf.runtime.agent_main:app --host 0.0.0.0 --port 7070
+    environment:
+      <<: *reasoner-env
+      AGENT_ID: payment-1
+      AGENT_SERVICE: payment
+      SERVICE_TELEMETRY_URL: http://payment:8080/caf/telemetry
+      AGENT_PEERS: subscription-agent:7070,auth-agent:7070,user-api-agent:7070
+    depends_on:
+      payment:
+        condition: service_started
+    ports:
+      - "7071:7070"
+    networks: [caf]
+
+  subscription-agent:
+    image: caf-testbed:local
+    command: uvicorn caf.runtime.agent_main:app --host 0.0.0.0 --port 7070
+    environment:
+      <<: *reasoner-env
+      AGENT_ID: subscription-1
+      AGENT_SERVICE: subscription
+      SERVICE_TELEMETRY_URL: http://subscription:8080/caf/telemetry
+      AGENT_PEERS: payment-agent:7070,auth-agent:7070,user-api-agent:7070
+    depends_on:
+      subscription:
+        condition: service_started
+    ports:
+      - "7072:7070"
+    networks: [caf]
+
+  auth-agent:
+    image: caf-testbed:local
+    command: uvicorn caf.runtime.agent_main:app --host 0.0.0.0 --port 7070
+    environment:
+      <<: *reasoner-env
+      AGENT_ID: auth-1
+      AGENT_SERVICE: auth
+      SERVICE_TELEMETRY_URL: http://auth:8080/caf/telemetry
+      AGENT_PEERS: payment-agent:7070,subscription-agent:7070,user-api-agent:7070
+    depends_on:
+      auth:
+        condition: service_started
+    ports:
+      - "7073:7070"
+    networks: [caf]
+
+  user-api-agent:
+    image: caf-testbed:local
+    command: uvicorn caf.runtime.agent_main:app --host 0.0.0.0 --port 7070
+    environment:
+      <<: *reasoner-env
+      AGENT_ID: user-api-1
+      AGENT_SERVICE: user-api
+      SERVICE_TELEMETRY_URL: http://user-api:8080/caf/telemetry
+      AGENT_PEERS: payment-agent:7070,subscription-agent:7070,auth-agent:7070
+    depends_on:
+      user-api:
+        condition: service_started
+    ports:
+      - "7074:7070"
+    networks: [caf]
+
+networks:
+  caf:
+    driver: bridge
